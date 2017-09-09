@@ -172,6 +172,32 @@ Bullet.update = function(){
 //set debug to false for release versions
 var DEBUG = true;
 
+var USERS = {
+	//username:password
+	"bob":"asd",
+	"bob2":"bob",
+	"bob3":"ttt",
+}
+//check if the user should be logged in
+var isValidPassword = function(data, callback){
+	setTimeout(function(){
+		callback(USERS[data.username] === data.password);
+	},10);
+}
+//check username is taken
+var isUsernameTaken = function(data, callback){
+	setTimeout(function(){
+		callback(USERS[data.username]);
+	},10);
+}
+//adds user to the users map
+var addUser = function(data, callback){
+	setTimeout(function(){
+		USERS[data.username] = data.password;
+		callback();
+	},10);
+}
+
 //create a socket connection
 var io = require('socket.io')(serv,{});
 //set the socket to listen to the client connection
@@ -180,7 +206,30 @@ io.sockets.on('connection', function(socket){
 	socket.id = Math.random();
 	SOCKET_LIST[socket.id] = socket;
 	
-	Player.onConnect(socket);
+	//listen to the user trying to sign in
+	socket.on('signIn', function(data){
+		isValidPassword(data, function(res) {//set the method to have the callback
+			if(res){
+				Player.onConnect(socket);
+				socket.emit('signInResponse', {success:true});
+			} else {
+				socket.emit('signInResponse', {success:false});
+			}
+		});
+	});
+	//listen to the user trying to sign up
+	socket.on('signUp', function(data){
+		isUsernameTaken(data, function(res){
+			if(res){
+				socket.emit('signUpResponse', {success:false});
+			} else {
+				addUser(data, function(){
+					socket.emit('signUpResponse', {success:true});
+				});
+			}
+		});
+		
+	});
 	
 	//listen to the user disconnect and delete socket and player
 	socket.on('disconnect', function(){
