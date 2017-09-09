@@ -29,7 +29,7 @@ var Entity = function(){
 	}
 	return self;
 }
-
+//Player class
 var Player = function(id){
 	//Player object value fields
 	var self = Entity();
@@ -103,7 +103,7 @@ Player.update = function(){
 	}
 	return pack;
 }
-
+//Bullet class
 var Bullet = function(angle){
 	var self = Entity();
 	self.id = Math.random();
@@ -141,6 +141,9 @@ Bullet.update = function(){
 	return pack;
 }
 
+//set debug to false for release versions
+var DEBUG = true;
+
 //create a socket connection
 var io = require('socket.io')(serv,{});
 //set the socket to listen to the client connection
@@ -151,9 +154,25 @@ io.sockets.on('connection', function(socket){
 	
 	Player.onConnect(socket);
 	
+	//listen to the user disconnect and delete socket and player
 	socket.on('disconnect', function(){
 		delete SOCKET_LIST[socket.id];
 		Player.onDisconnect(socket);
+	});
+	
+	//listen to the user text messages
+	socket.on('sendMsgToServer', function(data){
+		var playerName = ("" + socket.id).slice(2,7);
+		for(var i in SOCKET_LIST){
+			SOCKET_LIST[i].emit('addToChat', playerName + ': ' + data);
+		}
+	});
+	
+	socket.on('evalServer', function(data){
+		if(!DEBUG)
+			return;
+		var res = eval(data);
+		socket.emit('evalAnswer', res);
 	});
 });
 
