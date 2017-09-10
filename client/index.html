@@ -18,6 +18,8 @@
 <script src="https://cdn.socket.io/socket.io-1.4.5.js"
 ></script>
 <script>
+	var WIDTH = 500;
+	var HEIGHT = 500;
 	//connect to the server
 	var socket = io();
 	
@@ -81,6 +83,14 @@
 	}
 	
 	//game
+	var Img = {};
+	Img.player = new Image();
+	Img.player.src = '/client/img/player.png';
+	Img.bullet = new Image();
+	Img.bullet.src = '/client/img/bullet.png';
+	Img.map = new Image();
+	Img.map.src = '/client/img/map.png';
+	
 	var ctx = document.getElementById("ctx").getContext("2d");
 	ctx.font = '30px Arial';
 	
@@ -97,11 +107,24 @@
 		
 		//method for player object to draw itself
 		self.draw = function(){
+			var x = self.x - Player.list[selfId].x + WIDTH/2;
+			var y = self.y - Player.list[selfId].y + HEIGHT/2;
 			var hpWidth = 30 * self.hp / self.hpMax;
-			ctx.fillRect(self.x - hpWidth/2, self.y - 40, hpWidth, 4);
-			ctx.fillText(self.number, self.x, self.y);
+			ctx.fillStyle = 'red';
+			ctx.fillRect(x - hpWidth/2, y - 40, hpWidth, 4);
 			
-			ctx.fillText(self.score, self.x, self.y-60);
+			var x = self.x - Player.list[selfId].x + WIDTH/2;
+			var y = self.y - Player.list[selfId].y + HEIGHT/2;
+			
+			//make the image twice the size
+			var width = Img.player.width*2;
+			var height = Img.player.height*2;
+			//draw the player image
+			ctx.drawImage(Img.player,
+				0, 0, Img.player.width, Img.player.height,
+				x - width/2, y - width/2, width, height);
+			
+			//ctx.fillText(self.score, self.x, self.y-60);
 		}
 		
 		Player.list[self.id] = self;
@@ -118,7 +141,16 @@
 		
 		//method for bullet object to draw itself
 		self.draw = function(){
-			ctx.fillRect(self.x-5, self.y-5, 10, 10);
+			//make the image half the size
+			var width = Img.bullet.width/2;
+			var height = Img.bullet.height/2;
+			
+			var x = self.x - Player.list[selfId].x + WIDTH/2;
+			var y = self.y - Player.list[selfId].y + HEIGHT/2;
+			//draw the bullet image
+			ctx.drawImage(Img.bullet,
+				0, 0, Img.bullet.width, Img.bullet.height,
+				x - width/2, y - width/2, width, height);
 		}
 		
 		Bullet.list[self.id] = self;
@@ -126,8 +158,12 @@
 	}
 	Bullet.list = {};
 	
+	var selfId = null;
+
 	//initialisation packages
 	socket.on('init', function(data){
+		if(data.selfId)
+			selfId = data.selfId;
 		for(var i = 0; i < data.player.length; i++){
 			new Player(data.player[i]);
 		}
@@ -175,7 +211,12 @@
 	});
 	
 	setInterval(function(){
+	//dont draw the player and the map, until we have users selfId
+		if(!selfId)
+			return;
 		ctx.clearRect(0,0,500,500);
+		drawMap();
+		drawScore();
 		for(var i in Player.list){
 			Player.list[i].draw();
 		}
@@ -183,6 +224,17 @@
 			Bullet.list[i].draw();
 		}
 	}, 40);
+	
+	var drawMap = function(){
+		var x = WIDTH/2 - Player.list[selfId].x;
+		var y = HEIGHT/2 - Player.list[selfId].y;
+		ctx.drawImage(Img.map, x, y);
+	}
+	
+	var drawScore = function(){
+		ctx.fillStyle = 'white';
+		ctx.fillText(Player.list[selfId].score, 0, 30);
+	}
 	
 	//listen for a keydown event and send it to the server
 	document.onkeydown = function(event){
