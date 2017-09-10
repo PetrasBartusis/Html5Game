@@ -1,6 +1,6 @@
 
-var mongojs = require('mongojs');
-var db = mongojs('localhost:27017/myGame', ['account', 'progress']);
+//var mongojs = require('mongojs');
+var db = null;//mongojs('localhost:27017/myGame', ['account', 'progress']);
 
 var express = require('express');
 var app = express();
@@ -10,7 +10,7 @@ app.get('/', function(req, res){
 });
 app.use('/client', express.static(__dirname + '/client'));
 
-serv.listen(2000);
+serv.listen(process.env.PORT || 2000);
 console.log("Server started");
 
 var SOCKET_LIST = {};
@@ -258,29 +258,32 @@ var USERS = {
 }
 //check if the user should be logged in
 var isValidPassword = function(data, callback){
-	db.account.find({username:data.username,password:data.password},function(err,res){
+	return callback(true);
+	/*db.account.find({username:data.username,password:data.password},function(err,res){
 		if(res.length > 0){
 			callback(true);
 		} else {
 			callback(false);
 		}
-	});
+	});*/
 }
 //check username is taken
 var isUsernameTaken = function(data, callback){
-	db.account.find({username:data.username},function(err,res){
+	return callback(false);
+	/*db.account.find({username:data.username},function(err,res){
 		if(res.length > 0){
 			callback(true);
 		} else {
 			callback(false);
 		}
-	});
+	});*/
 }
 //adds user to the users map
 var addUser = function(data, callback){
-	db.account.insert({username:data.username,password:data.password},function(err){
+	callback();
+	/*db.account.insert({username:data.username,password:data.password},function(err){
 		callback();
-	});
+	});*/
 }
 
 //create a socket connection
