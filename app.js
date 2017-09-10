@@ -49,6 +49,9 @@ var Player = function(id){
 	self.pressingAttack = false;
 	self.mouseAngle = 0;
 	self.maxSpd = 10;
+	self.hp = 10;
+	self.hpMax = 10;
+	self.score = 0;
 	
 	var super_update = self.update;
 	//update speed and use parent update method
@@ -83,14 +86,32 @@ var Player = function(id){
 		else
 			self.spdY = 0;
 	}
+	//create an init package for player
+	self.getInitPack = function(){
+		return {
+			id:self.id,
+			x:self.x,
+			y:self.y,
+			number:self.number,
+			hp:self.hp,
+			hpMax:self.hpMax,
+			score:self.score,
+		};
+	}
+	//create an update package for player
+	self.getUpdatePack = function(){
+		return {
+			id:self.id,
+			x:self.x,
+			y:self.y,
+			hp:self.hp,
+			score:self.score,
+		};
+	}
+	
 	//add player to the list
 	Player.list[id] = self;
-	initPack.player.push({
-		id:self.id,
-		x:self.x,
-		y:self.y,
-		number:self.number,
-	});
+	initPack.player.push(self.getInitPack());
 	return self;
 }
 Player.list = {};
@@ -112,6 +133,20 @@ Player.onConnect = function(socket){
 		else if(data.inputId === 'mouseAngle')
 			player.mouseAngle = data.state;
 	});
+	
+	
+	
+	socket.emit('init', {
+		player:Player.getAllInitPack(),
+		bullet:Bullet.getAllInitPack(),
+	});
+}
+Player.getAllInitPack = function(){
+	//put every player in a package
+	var players = [];
+	for(var i in Player.list)
+		players.push(Player.list[i].getInitPack());
+	return players;
 }
 Player.onDisconnect = function(socket){
 	delete Player.list[socket.id];
@@ -125,11 +160,7 @@ Player.update = function(){
 		var player = Player.list[i];
 		player.update();
 		//have a packet for each user
-		pack.push({
-			id:player.id,
-			x:player.x,
-			y:player.y,
-		});
+		pack.push(player.getUpdatePack());
 	}
 	return pack;
 }
@@ -152,17 +183,42 @@ var Bullet = function(parent, angle){
 			var p = Player.list[i];
 			//check if bullet is not at the player (shot the player)
 			if(self.getDistance(p) < 32 && self.parent !== p.id){
-				//handle collision. ex: hp--;
+				p.hp -= 1;
+				//self.parent is the parent id, so we need to get it
+				var shooter = Player.list[self.parent];
+				
+				if(p.hp <= 0){
+					if(shooter){
+						shooter.score += 1;
+					}
+					p.hp = p.hpMax;
+					p.x = Math.random()*500;
+					p.y = Math.random()*500;
+				}
+				
 				self.toRemove = true;
 			}
 		}
 	}
+	//create an init package for bullet
+	self.getInitPack = function(){
+		return {
+			id:self.id,
+			x:self.x,
+			y:self.y,
+		};
+	}
+	//create an update package for bullet
+	self.getUpdatePack = function(){
+		return {
+			id:self.id,
+			x:self.x,
+			y:self.y,
+		};
+	}
+	
 	Bullet.list[self.id] = self;
-	initPack.bullet.push({
-		id:self.id,
-		x:self.x,
-		y:self.y,
-	});
+	initPack.bullet.push(self.getInitPack());
 	return self;
 }
 Bullet.list = {};
@@ -177,16 +233,19 @@ Bullet.update = function(){
 			delete Bullet.list[i];
 			removePack.bullet.push(bullet.id);
 		} else { //have a packet for each bullet
-			pack.push({
-				id:bullet.id,
-				x:bullet.x,
-				y:bullet.y,
-			});
+			pack.push(bullet.getUpdatePack());
 		}
 	}
 	return pack;
 }
-
+Bullet.getAllInitPack = function(){
+	//put every bullet in a package
+	var bullets = [];
+	for(var i in Bullet.list)
+		bullets.push(Bullet.list[i].getInitPack());
+	return bullets;
+}
+ 
 //set debug to false for release versions
 var DEBUG = true;
 
